@@ -142,7 +142,8 @@ day-28-site-tomograph/
 │       └── app.js             # 主入口
 ├── assets/
 │   └── preview.webp           # 預覽圖
-├── requirements.txt
+├── pyproject.toml             # uv 專案設定
+├── uv.lock                    # 依賴鎖定
 ├── LICENSE
 ├── README.md
 └── README_EN.md
@@ -157,15 +158,11 @@ day-28-site-tomograph/
 git clone https://github.com/tznthou/day-28-site-tomograph.git
 cd day-28-site-tomograph
 
-# 建立虛擬環境
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 安裝依賴
-pip install -r requirements.txt
+# 安裝依賴（使用 uv）
+uv sync
 
 # 啟動開發伺服器
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 
 # 開啟瀏覽器
 open http://localhost:8000

@@ -142,7 +142,8 @@ day-28-site-tomograph/
 │       └── app.js             # Main entry
 ├── assets/
 │   └── preview.webp           # Preview image
-├── requirements.txt
+├── pyproject.toml             # uv project config
+├── uv.lock                    # Dependency lock
 ├── LICENSE
 ├── README.md
 └── README_EN.md
@@ -157,15 +158,11 @@ day-28-site-tomograph/
 git clone https://github.com/tznthou/day-28-site-tomograph.git
 cd day-28-site-tomograph
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (using uv)
+uv sync
 
 # Start dev server
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 
 # Open browser
 open http://localhost:8000
