@@ -1,0 +1,335 @@
+/**
+ * Site Tomograph - 低光度精密感樣式
+ * 深海黑背景 + 磷光綠/工業琥珀
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* 色彩計畫 */
+    --bg-deep: #0a0a0f;
+    --bg-panel: rgba(15, 15, 25, 0.9);
+    --border: rgba(34, 197, 94, 0.2);
+
+    /* 狀態色彩 */
+    --healthy: #22c55e;      /* 磷光綠 */
+    --blockage: #d97706;     /* 工業琥珀 */
+    --necrosis: #6b7280;     /* 死灰 */
+
+    /* 文字 */
+    --text-primary: rgba(255, 255, 255, 0.9);
+    --text-secondary: rgba(255, 255, 255, 0.5);
+
+    /* 字體 */
+    --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+body {
+    font-family: var(--font-mono);
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* 動態噪點背景 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 控制面板 */
+#control-panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 280px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+#control-panel h1 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--healthy);
+}
+
+.subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+#url-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+#url-input:focus {
+    outline: none;
+    border-color: var(--healthy);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+}
+
+#scan-btn {
+    background: var(--healthy);
+    color: var(--bg-deep);
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#scan-btn:hover {
+    background: #16a34a;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+#scan-btn:disabled {
+    background: var(--necrosis);
+    cursor: not-allowed;
+}
+
+/* 狀態面板 */
+#status-panel {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-bottom: 12px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+}
+
+.status-item .label {
+    color: var(--text-secondary);
+}
+
+.status-item .value {
+    color: var(--healthy);
+}
+
+.status-item .value.error {
+    color: var(--necrosis);
+}
+
+.status-item .value.warning {
+    color: var(--blockage);
+}
+
+/* 圖例 */
+#legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.7rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dot.healthy {
+    background: var(--healthy);
+    box-shadow: 0 0 6px var(--healthy);
+}
+
+.dot.blockage {
+    background: var(--blockage);
+    box-shadow: 0 0 6px var(--blockage);
+}
+
+.dot.necrosis {
+    background: var(--necrosis);
+}
+
+/* 3D 圖容器 */
+#graph-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* 節點資訊面板 */
+#node-info {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 300px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+#node-info h3 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--healthy);
+}
+
+#info-content {
+    font-size: 0.75rem;
+    line-height: 1.6;
+}
+
+#info-content .url {
+    color: var(--text-secondary);
+    word-break: break-all;
+    margin-bottom: 8px;
+}
+
+#info-content .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+/* 報告面板 */
+#report-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: var(--bg-panel);
+    border: 1px solid var(--healthy);
+    border-radius: 8px;
+    padding: 24px;
+    z-index: 200;
+    backdrop-filter: blur(10px);
+}
+
+#report-panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    color: var(--healthy);
+}
+
+#report-content {
+    font-size: 0.8rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+#report-panel button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    margin-right: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+#report-panel button:hover {
+    border-color: var(--healthy);
+    color: var(--healthy);
+}
+
+#download-report {
+    background: var(--healthy) !important;
+    color: var(--bg-deep) !important;
+    border-color: var(--healthy) !important;
+}
+
+/* 載入動畫 */
+#loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 300;
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--healthy);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 12px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#loading p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* 隱藏 */
+.hidden {
+    display: none !important;
+}
+
+/* 真空管暖機動畫 */
+@keyframes warmup {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+.warmup {
+    animation: warmup 2s ease-out forwards;
+}

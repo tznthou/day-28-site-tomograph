@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Tomograph | 網站斷層掃描</title>
+    <meta name="description" content="3D 即時網站結構診斷儀 - 視覺化發現死連結、慢速頁面與孤兒節點">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- 3D Force Graph -->
+    <script src="https://unpkg.com/3d-force-graph@1.73.0/dist/3d-force-graph.min.js"></script>
+</head>
+<body>
+    <!-- 控制面板 -->
+    <div id="control-panel">
+        <h1>🔬 Site Tomograph</h1>
+        <p class="subtitle">網站斷層掃描</p>
+
+        <div class="input-group">
+            <input
+                type="url"
+                id="url-input"
+                placeholder="輸入網址開始掃描..."
+                autocomplete="off"
+            >
+            <button id="scan-btn">掃描</button>
+        </div>
+
+        <div id="status-panel" class="hidden">
+            <div class="status-item">
+                <span class="label">狀態</span>
+                <span id="scan-status" class="value">準備中...</span>
+            </div>
+            <div class="status-item">
+                <span class="label">已掃描</span>
+                <span id="node-count" class="value">0</span>
+            </div>
+            <div class="status-item">
+                <span class="label">壞死</span>
+                <span id="dead-count" class="value error">0</span>
+            </div>
+            <div class="status-item">
+                <span class="label">阻塞</span>
+                <span id="slow-count" class="value warning">0</span>
+            </div>
+        </div>
+
+        <div id="legend">
+            <div class="legend-item">
+                <span class="dot healthy"></span>
+                <span>健康</span>
+            </div>
+            <div class="legend-item">
+                <span class="dot blockage"></span>
+                <span>阻塞 (&gt;2s)</span>
+            </div>
+            <div class="legend-item">
+                <span class="dot necrosis"></span>
+                <span>壞死 (4xx/5xx)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3D 圖容器 -->
+    <div id="graph-container"></div>
+
+    <!-- 節點資訊面板 -->
+    <div id="node-info" class="hidden">
+        <h3 id="info-title">節點資訊</h3>
+        <div id="info-content"></div>
+    </div>
+
+    <!-- 報告面板 -->
+    <div id="report-panel" class="hidden">
+        <h2>📋 診斷報告</h2>
+        <div id="report-content"></div>
+        <button id="download-report">下載 JSON</button>
+        <button id="close-report">關閉</button>
+    </div>
+
+    <!-- 載入動畫 -->
+    <div id="loading" class="hidden">
+        <div class="loader"></div>
+        <p>真空管暖機中...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/graph.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
