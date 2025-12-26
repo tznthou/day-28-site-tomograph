@@ -216,7 +216,6 @@ class SiteTomograph {
 
             case 'limit_reached':
                 this.scanStatus.textContent = '已達上限';
-                console.log(data.message);
                 break;
 
             case 'error':

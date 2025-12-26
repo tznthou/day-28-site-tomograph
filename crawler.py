@@ -85,12 +85,13 @@ class SiteCrawler:
             if parsed.netloc != self.base_domain:
                 return None
 
-            # 移除 fragment 和 query string（簡化）
-            normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            # 正規化路徑：移除尾端斜線以統一 (M03 修復)
+            # 修正：原邏輯在 path='/' 時 len=1 導致不會移除斜線
+            # 例如 example.com/ 和 example.com 應該視為相同
+            path = parsed.path.rstrip('/') if parsed.path else ''
 
-            # 移除尾端斜線以統一
-            if normalized.endswith("/") and len(parsed.path) > 1:
-                normalized = normalized[:-1]
+            # 移除 fragment 和 query string（簡化）
+            normalized = f"{parsed.scheme}://{parsed.netloc}{path}"
 
             return normalized
         except Exception:

@@ -1,9 +1,10 @@
 # Site Tomograph 網站斷層掃描
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg)](https://fastapi.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
 [![Three.js](https://img.shields.io/badge/Three.js-r158-000000.svg)](https://threejs.org/)
 [![3d-force-graph](https://img.shields.io/badge/3d--force--graph-1.73-FF6B6B.svg)](https://github.com/vasturiano/3d-force-graph)
+[![Tests](https://img.shields.io/badge/Tests-48%20passed-22c55e.svg)](tests/)
 
 [← Back to Muripo HQ](https://tznthou.github.io/muripo-hq/) | [中文](README.md)
 
@@ -11,7 +12,7 @@ A low-light, high-immersion 3D website structure diagnostic tool. Enter a URL an
 
 ![Site Tomograph](assets/preview.webp)
 
-> **"This isn't just a visual piece—it's a professional diagnostic instrument that lets developers 'see' structural defects in code."**
+> **"This isn't just a visual piece—it's a professional diagnostic instrument that lets developers 'see' website link structure."**
 
 ---
 
@@ -19,7 +20,7 @@ A low-light, high-immersion 3D website structure diagnostic tool. Enter a URL an
 
 Traditional website health check tools give you a cold report. This tool lets you **witness** how a website's neural network grows and where it starts to decay.
 
-Using the gradual aesthetics of "vacuum tube warm-up" and the scanning effects of "optical refraction," we've created a space where developers can quietly and comfortably observe the growth and decay of digital organisms.
+Through low-light, high-immersion 3D visualization, we've created a space where developers can quietly and comfortably observe the growth and decay of website structures.
 
 ---
 
@@ -31,6 +32,23 @@ Using the gradual aesthetics of "vacuum tube warm-up" and the scanning effects o
 | **Latency Heat Mapping** | Intuitively display page response delays through particle flow speed on connections |
 | **Dead Link Tracking** | Click any gray necrotic node to highlight all source paths pointing to that error page |
 | **Diagnostic Report Export** | After scanning, export a JSON report containing "necrotic tissue list" and "structural recommendations" |
+| **Dark/Light Theme** | Supports dual theme switching with real-time 3D graph color updates |
+
+---
+
+## Security
+
+This tool includes multi-layer security protection for responsible website scanning:
+
+| Mechanism | Description |
+|-----------|-------------|
+| **SSRF Protection** | Blocks private IPs, localhost, cloud metadata endpoints, and other dangerous targets |
+| **Rate Limiting** | Max 5 requests per IP per minute, max 10 concurrent scans globally |
+| **robots.txt Compliance** | Automatically reads and respects target website's robots.txt rules |
+| **Exponential Backoff Retry** | Auto-retries on 5xx errors to avoid misjudging temporary failures |
+| **Security Headers** | Complete CSP, X-Frame-Options, X-Content-Type-Options, etc. |
+| **Input Validation** | Pydantic model validation + frontend double-check |
+| **Error Masking** | Error messages automatically strip internal paths, IPs, and sensitive info |
 
 ---
 
@@ -59,8 +77,7 @@ The system triggers gentle but definite physical changes based on crawler result
 
 ### Boot Aesthetics
 
-- **Vacuum Tube Warm-up**: Simulates vacuum tube warm-up, light points gradually emerge, no harsh flashing
-- **Refraction Scan**: Uses "refraction plane" instead of "laser plane", nodes produce subtle dispersion and displacement as the scan surface passes
+- **Gradual Emergence**: Nodes and connections gradually emerge, no harsh flashing, protecting visual comfort for long observation sessions
 
 ---
 
@@ -106,11 +123,13 @@ The system triggers gentle but definite physical changes based on crawler result
 
 | Module | Responsibility |
 |--------|----------------|
-| `main.py` | FastAPI entry, WebSocket endpoint |
-| `crawler.py` | Async crawler engine |
-| `static/js/graph.js` | 3D force-directed graph rendering |
-| `static/js/effects.js` | Visual effects (decay, pulse) |
-| `static/js/app.js` | Main entry, state management |
+| `main.py` | FastAPI entry, WebSocket endpoint, logging |
+| `crawler.py` | Async crawler engine, robots.txt, retry mechanism |
+| `security.py` | SSRF protection, rate limiting, validation, security headers |
+| `static/js/graph.js` | 3D force-directed graph rendering, WebGL resource management |
+| `static/js/app.js` | Main entry, state management, frontend validation |
+| `static/js/theme.js` | Dark/light theme switching |
+| `tests/` | 48 unit tests (security module + crawler core logic) |
 
 ---
 
@@ -129,17 +148,21 @@ The system triggers gentle but definite physical changes based on crawler result
 
 ```
 day-28-site-tomograph/
-├── main.py                    # FastAPI entry
-├── crawler.py                 # Crawler engine
+├── main.py                    # FastAPI entry, WebSocket, logging
+├── crawler.py                 # Async crawler engine
+├── security.py                # Security module (SSRF, rate limit, validation)
 ├── templates/
 │   └── index.html             # Main page
 ├── static/
 │   ├── css/
-│   │   └── style.css          # Dark theme styles
+│   │   └── style.css          # Dark/light theme styles
 │   └── js/
-│       ├── graph.js           # 3D graph rendering
-│       ├── effects.js         # Visual effects
-│       └── app.js             # Main entry
+│       ├── graph.js           # 3D force-directed graph rendering
+│       ├── theme.js           # Theme switching
+│       └── app.js             # Main entry, state management
+├── tests/                     # Unit tests
+│   ├── test_security.py       # Security module tests
+│   └── test_crawler.py        # Crawler logic tests
 ├── assets/
 │   └── preview.webp           # Preview image
 ├── pyproject.toml             # uv project config
@@ -168,6 +191,19 @@ uv run uvicorn main:app --reload
 open http://localhost:8000
 ```
 
+### Running Tests
+
+```bash
+# Install dev dependencies
+uv sync --extra dev
+
+# Run all tests
+uv run pytest tests/ -v
+
+# Run single test file
+uv run pytest tests/test_security.py -v
+```
+
 ---
 
 ## Deployment
@@ -177,6 +213,14 @@ This project is deployed on [Zeabur](https://zeabur.com/).
 ---
 
 ## Future Plans
+
+### Completed ✓
+- [x] Dark/light theme switching
+- [x] Complete security mechanisms (SSRF, rate limiting, input validation)
+- [x] Unit test coverage (48 tests)
+- [x] Structured logging
+- [x] robots.txt compliance
+- [x] Error retry mechanism (exponential backoff)
 
 ### Visual Enhancements
 - [ ] Custom Three.js Shader for "refraction scan plane" effect
@@ -193,25 +237,27 @@ This project is deployed on [Zeabur](https://zeabur.com/).
 
 ## Reflections
 
-### Why "Tomograph"?
+### A Simple Need
 
-Medical CT scans let doctors see the internal structure of the body and find lesions.
+The core function of this project is actually quite simple: check if a website's links are still alive, and find any broken ones that need fixing.
 
-Websites also have their "body"—pages are organs, links are blood vessels, response time is blood pressure. When you enter a URL, this tool is like putting the website into a CT scanner, unfolding its internal structure layer by layer.
+But I thought, if I'm going to build it anyway, why not present it in an interesting way? Instead of giving a cold list, let people "see" how the website structure grows and where it starts to decay.
 
-### The Meaning of Low Light
+### Unexpectedly Fun
 
-Harsh light and flashing cause fatigue. Developers often need to stare at screens for long periods while debugging, so this tool deliberately chose a "low-light precision" visual style.
+The result turned out more interesting than expected. Watching nodes pop up one by one, connections gradually forming, broken spots turning gray and sinking—there's a strangely therapeutic quality to this "observation" process.
 
-No neon flashing, no explosion effects. Just light points gradually glowing like vacuum tube warm-up, just signals quietly conducting through optical fibers. This is a space where people can focus and think.
+Maybe it's because we usually only see results, rarely getting to witness the "process."
 
-### The Aesthetics of Decay
+### Future Possibilities
 
-Broken things also have their beauty.
+The current version is just a starting point. A few directions I'd like to explore:
 
-When a node turns gray and starts sinking, you're not just seeing a "404 error"—you're seeing the local necrosis of a digital organism. When a connection becomes viscous and drags a long tail, you feel the signal's difficult journey through that path.
+- Add sound effects, subtle audio when nodes emerge
+- More refined visual effects, like vacuum tubes slowly warming up
+- Support more diagnostic metrics, beyond just link health
 
-This isn't fear—this is understanding. Only after understanding can we begin to repair.
+I'll work on these when I have time. I think it could be quite an interesting experience.
 
 ---
 

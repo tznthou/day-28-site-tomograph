@@ -1,9 +1,10 @@
 # Site Tomograph 網站斷層掃描
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg)](https://fastapi.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
 [![Three.js](https://img.shields.io/badge/Three.js-r158-000000.svg)](https://threejs.org/)
 [![3d-force-graph](https://img.shields.io/badge/3d--force--graph-1.73-FF6B6B.svg)](https://github.com/vasturiano/3d-force-graph)
+[![Tests](https://img.shields.io/badge/Tests-48%20passed-22c55e.svg)](tests/)
 
 [← 回到 Muripo HQ](https://tznthou.github.io/muripo-hq/) | [English](README_EN.md)
 
@@ -11,7 +12,7 @@
 
 ![Site Tomograph](assets/preview.webp)
 
-> **"這不只是視覺作品，這是能讓開發者『看見』代碼結構缺陷的專業診斷儀。"**
+> **"這不只是視覺作品，這是能讓開發者『看見』網站連結結構的專業診斷儀。"**
 
 ---
 
@@ -19,7 +20,7 @@
 
 傳統的網站健康檢查工具給你一份冰冷的報告。這個工具讓你**親眼看見**網站的神經網路如何生長、哪裡開始壞死。
 
-利用「真空管暖機」的漸進美學與「光學折射」的掃描特效，打造一個讓開發者能安靜、舒適地觀察數位生命體生長與衰亡的空間。
+透過低光度、高沈浸感的 3D 視覺化，打造一個讓開發者能安靜、舒適地觀察網站結構生長與衰亡的空間。
 
 ---
 
@@ -31,6 +32,23 @@
 | **延遲熱力映射** | 透過連線上的粒子流動速度，直覺呈現各頁面的回應延遲 |
 | **死連結追蹤** | 點擊任何灰色壞死節點，高亮顯示所有指向該錯誤頁面的來源路徑 |
 | **診斷報告匯出** | 掃描結束後，匯出包含「壞死組織清單」與「結構建議」的 JSON 報告 |
+| **深色/淺色主題** | 支援雙主題切換，3D 圖表即時更新色彩配置 |
+
+---
+
+## 安全機制
+
+本工具內建多層安全防護，確保負責任的網站掃描：
+
+| 機制 | 說明 |
+|------|------|
+| **SSRF 防護** | 阻擋私有 IP、localhost、雲端 metadata endpoint 等危險目標 |
+| **速率限制** | 每 IP 每分鐘最多 5 次請求，全域最大 10 個並發掃描 |
+| **robots.txt 遵守** | 自動讀取並尊重目標網站的 robots.txt 規則 |
+| **指數退避重試** | 對 5xx 錯誤自動重試，避免誤判暫時性故障 |
+| **安全標頭** | 完整的 CSP、X-Frame-Options、X-Content-Type-Options 等 |
+| **輸入驗證** | Pydantic 模型驗證 + 前端雙重檢查 |
+| **錯誤遮蔽** | 錯誤訊息自動移除內部路徑、IP 等敏感資訊 |
 
 ---
 
@@ -59,8 +77,7 @@
 
 ### 啟動美學
 
-- **真空管暖機**：模擬真空管暖機，光點緩緩浮現，無任何強烈閃爍
-- **折射掃描**：使用「折射平面」取代「雷射平面」，掃描面經過時節點產生微小的色散與位移
+- **漸進浮現**：節點與連線緩緩浮現，無任何強烈閃爍，保護開發者長時間觀察的視覺舒適
 
 ---
 
@@ -106,11 +123,13 @@
 
 | 模組 | 職責 |
 |------|------|
-| `main.py` | FastAPI 入口、WebSocket 端點 |
-| `crawler.py` | 非同步爬蟲引擎 |
-| `static/js/graph.js` | 3D 力導向圖渲染 |
-| `static/js/effects.js` | 視覺特效（衰敗、脈衝） |
-| `static/js/app.js` | 主入口、狀態管理 |
+| `main.py` | FastAPI 入口、WebSocket 端點、日誌記錄 |
+| `crawler.py` | 非同步爬蟲引擎、robots.txt 遵守、重試機制 |
+| `security.py` | SSRF 防護、速率限制、輸入驗證、安全標頭 |
+| `static/js/graph.js` | 3D 力導向圖渲染、WebGL 資源管理 |
+| `static/js/app.js` | 主入口、狀態管理、前端驗證 |
+| `static/js/theme.js` | 深色/淺色主題切換 |
+| `tests/` | 48 個單元測試（安全模組 + 爬蟲核心邏輯） |
 
 ---
 
@@ -129,17 +148,21 @@
 
 ```
 day-28-site-tomograph/
-├── main.py                    # FastAPI 入口
-├── crawler.py                 # 爬蟲引擎
+├── main.py                    # FastAPI 入口、WebSocket、日誌
+├── crawler.py                 # 非同步爬蟲引擎
+├── security.py                # 安全模組（SSRF、速率限制、驗證）
 ├── templates/
 │   └── index.html             # 主頁面
 ├── static/
 │   ├── css/
-│   │   └── style.css          # 深色主題樣式
+│   │   └── style.css          # 深色/淺色主題樣式
 │   └── js/
-│       ├── graph.js           # 3D 圖渲染
-│       ├── effects.js         # 視覺特效
-│       └── app.js             # 主入口
+│       ├── graph.js           # 3D 力導向圖渲染
+│       ├── theme.js           # 主題切換
+│       └── app.js             # 主入口、狀態管理
+├── tests/                     # 單元測試
+│   ├── test_security.py       # 安全模組測試
+│   └── test_crawler.py        # 爬蟲邏輯測試
 ├── assets/
 │   └── preview.webp           # 預覽圖
 ├── pyproject.toml             # uv 專案設定
@@ -168,6 +191,19 @@ uv run uvicorn main:app --reload
 open http://localhost:8000
 ```
 
+### 執行測試
+
+```bash
+# 安裝開發依賴
+uv sync --extra dev
+
+# 執行所有測試
+uv run pytest tests/ -v
+
+# 執行單一測試檔案
+uv run pytest tests/test_security.py -v
+```
+
 ---
 
 ## 部署
@@ -177,6 +213,14 @@ open http://localhost:8000
 ---
 
 ## 未來規劃
+
+### 已完成 ✓
+- [x] 深色/淺色主題切換
+- [x] 完整安全機制（SSRF、速率限制、輸入驗證）
+- [x] 單元測試覆蓋（48 個測試）
+- [x] 結構化日誌記錄
+- [x] robots.txt 遵守
+- [x] 錯誤重試機制（指數退避）
 
 ### 視覺強化
 - [ ] 自定義 Three.js Shader 實作「折射掃描面」效果
@@ -193,25 +237,27 @@ open http://localhost:8000
 
 ## 隨想
 
-### 為什麼是「斷層掃描」？
+### 一個簡單的需求
 
-醫學上的 CT 掃描讓醫生看見身體內部的結構，找出病灶。
+這個專案的核心功能其實很簡單：檢查網站的連結是否還活著、有沒有斷掉需要修復的地方。
 
-網站也有它的「身體」——頁面是器官，連結是血管，回應時間是血壓。當你輸入一個網址，這個工具就像把網站送進斷層掃描儀，一層一層地展開它的內部結構。
+但我想，既然要做，不如用一種有趣的方式來呈現。與其給出一份冰冷的清單，不如讓人「看見」網站的結構如何生長、哪裡開始衰敗。
 
-### 低光度的意義
+### 意外的有趣
 
-刺激性的強光與閃爍會讓人疲勞。開發者經常需要長時間盯著螢幕除錯，這個工具刻意選擇了「低光度精密感」的視覺風格。
+結果做出來的效果比預期有趣。看著節點一個一個冒出來，連線慢慢建立，壞掉的地方變灰下沉——這種「觀察」的過程本身就有一種奇妙的療癒感。
 
-沒有霓虹閃爍，沒有爆炸特效。只有真空管暖機般緩緩亮起的光點，只有光纖中安靜傳導的訊號。這是一個讓人能夠專注思考的空間。
+也許是因為平常我們只看到結果，很少有機會看到「過程」。
 
-### 衰敗的美學
+### 未來的可能
 
-壞掉的東西也有它的美。
+目前的版本只是個起點。腦中還有幾個想嘗試的方向：
 
-當一個節點變成灰色、開始下沉，你看見的不只是「404 錯誤」，而是一個數位生命體的局部壞死。當連線變得黏滯、拖著長長的尾巴，你感受到的是訊號在這條路徑上的艱難跋涉。
+- 加入音效，讓節點浮現時有微弱的聲響
+- 更精緻的視覺特效，像真空管暖機般緩緩亮起
+- 支援更多診斷指標，不只是連結健康度
 
-這不是恐懼，這是理解。理解之後，才能修復。
+有空再慢慢做。我想這會是一個蠻有趣的體驗。
 
 ---
 
