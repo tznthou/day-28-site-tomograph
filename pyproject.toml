@@ -3,7 +3,7 @@ name = "site-tomograph"
 version = "0.1.0"
 description = "3D 網站結構診斷儀 - 視覺化發現死連結、慢速頁面與孤兒節點"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     # 使用精確版本鎖定以確保安全性 (H08)
     "aiohttp==3.11.18",
