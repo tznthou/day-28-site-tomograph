@@ -7,19 +7,65 @@
     <meta name="description" content="3D 即時網站結構診斷儀 - 視覺化發現死連結、慢速頁面與孤兒節點">
 
     <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
     <!-- Styles -->
     <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- 防止主題閃爍 -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('site-tomograph-theme');
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
 
     <!-- 3D Force Graph -->
     <script src="https://unpkg.com/3d-force-graph@1.73.0/dist/3d-force-graph.min.js"></script>
 </head>
 <body>
+    <!-- 主題切換按鈕 -->
+    <button id="theme-toggle" title="切換深淺色主題">
+        <!-- 月亮 (深色模式顯示) -->
+        <svg class="icon-moon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <!-- 太陽 (淺色模式顯示) -->
+        <svg class="icon-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+    </button>
+
     <!-- 控制面板 -->
     <div id="control-panel">
-        <h1>🔬 Site Tomograph</h1>
-        <p class="subtitle">網站斷層掃描</p>
+        <div class="panel-header">
+            <div class="title-row">
+                <svg class="logo-icon" viewBox="0 0 32 32">
+                    <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="3" fill="currentColor"/>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                    <line x1="16" y1="26" x2="16" y2="30" stroke="currentColor" stroke-width="2"/>
+                    <line x1="2" y1="16" x2="6" y2="16" stroke="currentColor" stroke-width="2"/>
+                    <line x1="26" y1="16" x2="30" y2="16" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <div>
+                    <h1>Site Tomograph</h1>
+                    <p class="subtitle">網站斷層掃描</p>
+                </div>
+            </div>
+            <button id="about-btn" title="使用說明">?</button>
+        </div>
 
         <div class="input-group">
             <input
@@ -76,12 +122,14 @@
         <div id="info-content"></div>
     </div>
 
-    <!-- 報告面板 -->
+    <!-- 報告面板 - 右下角 -->
     <div id="report-panel" class="hidden">
         <h2>📋 診斷報告</h2>
         <div id="report-content"></div>
-        <button id="download-report">下載 JSON</button>
-        <button id="close-report">關閉</button>
+        <div class="btn-group">
+            <button id="download-report">下載 JSON</button>
+            <button id="close-report">關閉</button>
+        </div>
     </div>
 
     <!-- 載入動畫 -->
@@ -90,8 +138,89 @@
         <p>真空管暖機中...</p>
     </div>
 
+    <!-- 說明面板 -->
+    <div id="about-overlay" class="hidden">
+        <div id="about-panel">
+            <button id="close-about" title="關閉">×</button>
+            <div class="about-title">
+                <svg class="logo-icon large" viewBox="0 0 32 32">
+                    <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="3" fill="currentColor"/>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/>
+                    <line x1="16" y1="26" x2="16" y2="30" stroke="currentColor" stroke-width="2"/>
+                    <line x1="2" y1="16" x2="6" y2="16" stroke="currentColor" stroke-width="2"/>
+                    <line x1="26" y1="16" x2="30" y2="16" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <h2>Site Tomograph</h2>
+            </div>
+            <p class="about-tagline">三維即時網站結構診斷儀</p>
+
+            <section>
+                <h3>▸ 診斷原理</h3>
+                <p>Site Tomograph 採用<strong>非侵入式掃描技術</strong>，透過 HTTP 請求對網站進行拓撲結構分析。系統以起始 URL 為注射點，逐層追蹤內部連結，建構完整的血管網絡圖譜。</p>
+            </section>
+
+            <section>
+                <h3>▸ 診斷指標</h3>
+                <div class="indicator-grid">
+                    <div class="indicator">
+                        <span class="dot healthy"></span>
+                        <div>
+                            <strong>健康組織</strong>
+                            <p>HTTP 2xx，延遲 &lt; 2000ms</p>
+                        </div>
+                    </div>
+                    <div class="indicator">
+                        <span class="dot blockage"></span>
+                        <div>
+                            <strong>血管阻塞</strong>
+                            <p>回應正常但延遲 &gt; 2000ms</p>
+                        </div>
+                    </div>
+                    <div class="indicator">
+                        <span class="dot necrosis"></span>
+                        <div>
+                            <strong>組織壞死</strong>
+                            <p>HTTP 4xx/5xx 或連線逾時</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3>▸ 視覺編碼</h3>
+                <p>節點亮度反映<strong>層級深度</strong>：根節點最亮（100%），隨深度遞減至 40%。粒子流動速度反映連線健康狀態——阻塞處流速降低，模擬血流遲滯。</p>
+            </section>
+
+            <section>
+                <h3>▸ 安全限制</h3>
+                <ul>
+                    <li>最大掃描頁數：50 頁</li>
+                    <li>最大爬取深度：3 層</li>
+                    <li>請求間隔：500ms（防止伺服器過載）</li>
+                    <li>同時連線數：3 個</li>
+                </ul>
+            </section>
+
+            <section>
+                <h3>▸ 使用方式</h3>
+                <ol>
+                    <li>輸入目標網址（自動補全 https://）</li>
+                    <li>點擊「掃描」啟動診斷程序</li>
+                    <li>觀察即時拓撲生長與狀態變化</li>
+                    <li>點擊節點查看詳細診斷資訊</li>
+                    <li>下載 JSON 報告進行後續分析</li>
+                </ol>
+            </section>
+
+            <p class="about-footer">Site Tomograph v1.0 — Day 28 of 30-Day Project</p>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="/static/js/graph.js"></script>
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/theme.js"></script>
 </body>
 </html>

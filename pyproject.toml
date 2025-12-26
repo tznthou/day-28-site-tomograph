@@ -5,9 +5,11 @@ description = "3D 網站結構診斷儀 - 視覺化發現死連結、慢速頁�
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aiohttp>=3.13.2",
-    "beautifulsoup4>=4.14.3",
-    "fastapi>=0.127.1",
-    "jinja2>=3.1.6",
-    "uvicorn[standard]>=0.40.0",
+    # 使用精確版本鎖定以確保安全性 (H08)
+    "aiohttp==3.11.18",
+    "beautifulsoup4==4.13.4",
+    "fastapi==0.115.7",
+    "jinja2==3.1.6",
+    "uvicorn[standard]==0.34.0",
+    "pydantic==2.10.6",
 ]

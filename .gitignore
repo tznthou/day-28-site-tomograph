@@ -36,3 +36,9 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Mockup (設計稿，不需版控)
+mockup/
+
+# Code Review Reports
+CODE_REVIEW*.md

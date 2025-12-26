@@ -29,6 +29,16 @@ class SiteTomograph {
         };
         this.report = null;
 
+        // 危險域名黑名單 (H05)
+        this.dangerousHosts = new Set([
+            'localhost',
+            '127.0.0.1',
+            '0.0.0.0',
+            '::1',
+            'metadata.google.internal',
+            '169.254.169.254'
+        ]);
+
         // 初始化 3D 圖
         this.graph = new SiteGraph(document.getElementById('graph-container'));
         this.graph.onNodeSelect = (node) => this.showNodeInfo(node);
@@ -55,6 +65,25 @@ class SiteTomograph {
         document.getElementById('close-report').addEventListener('click', () => {
             this.reportPanel.classList.add('hidden');
         });
+
+        // 說明面板
+        const aboutOverlay = document.getElementById('about-overlay');
+        document.getElementById('about-btn').addEventListener('click', () => {
+            aboutOverlay.classList.remove('hidden');
+        });
+        document.getElementById('close-about').addEventListener('click', () => {
+            aboutOverlay.classList.add('hidden');
+        });
+        aboutOverlay.addEventListener('click', (e) => {
+            if (e.target === aboutOverlay) {
+                aboutOverlay.classList.add('hidden');
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !aboutOverlay.classList.contains('hidden')) {
+                aboutOverlay.classList.add('hidden');
+            }
+        });
     }
 
     stopScan() {
@@ -64,6 +93,39 @@ class SiteTomograph {
         }
         this.scanStatus.textContent = '已手動停止';
         this.endScan();
+    }
+
+    /**
+     * 前端 URL 驗證 (H05)
+     * 作為第一道防線，阻擋明顯危險的請求
+     */
+    validateUrl(url) {
+        try {
+            const parsed = new URL(url);
+
+            // 只允許 http/https
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                return { valid: false, error: '只支援 HTTP/HTTPS 協定' };
+            }
+
+            // 檢查危險域名
+            const hostname = parsed.hostname.toLowerCase();
+            if (this.dangerousHosts.has(hostname)) {
+                return { valid: false, error: '不允許掃描此域名' };
+            }
+
+            // 檢查私有 IP 範圍（簡單檢查）
+            if (hostname.startsWith('10.') ||
+                hostname.startsWith('192.168.') ||
+                hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) ||
+                hostname.startsWith('127.')) {
+                return { valid: false, error: '不允許掃描私有 IP 位址' };
+            }
+
+            return { valid: true };
+        } catch {
+            return { valid: false, error: '無效的 URL 格式' };
+        }
     }
 
     startScan() {
@@ -79,11 +141,10 @@ class SiteTomograph {
             url = 'https://' + url;
         }
 
-        // 驗證 URL
-        try {
-            new URL(url);
-        } catch {
-            alert('請輸入有效的網址');
+        // 前端 URL 驗證 (H05)
+        const validation = this.validateUrl(url);
+        if (!validation.valid) {
+            alert(validation.error);
             return;
         }
 
@@ -212,23 +273,26 @@ class SiteTomograph {
     showReport(report) {
         this.reportPanel.classList.remove('hidden');
 
+        // (H01 - XSS 修復) 確保所有數值都是整數
+        const safeInt = (val) => Number.isInteger(val) ? val : 0;
+
         let html = `
             <h3>摘要</h3>
             <div class="metric">
                 <span>總頁面數</span>
-                <span>${report.summary.total_pages}</span>
+                <span>${safeInt(report.summary.total_pages)}</span>
             </div>
             <div class="metric">
                 <span>壞死連結</span>
-                <span style="color: #6b7280">${report.summary.dead_links}</span>
+                <span style="color: #6b7280">${safeInt(report.summary.dead_links)}</span>
             </div>
             <div class="metric">
                 <span>高延遲頁面</span>
-                <span style="color: #d97706">${report.summary.slow_pages}</span>
+                <span style="color: #d97706">${safeInt(report.summary.slow_pages)}</span>
             </div>
             <div class="metric">
                 <span>孤兒頁面</span>
-                <span>${report.summary.orphan_pages}</span>
+                <span>${safeInt(report.summary.orphan_pages)}</span>
             </div>
         `;
 
@@ -240,13 +304,22 @@ class SiteTomograph {
             html += '</ul>';
         }
 
-        if (report.necrotic_tissue.length > 0) {
-            html += '<h3 style="margin-top: 16px;">壞死組織</h3><ul>';
-            report.necrotic_tissue.slice(0, 5).forEach(item => {
-                html += `<li><code>${item.status_code}</code> ${this.escapeHtml(item.url)}</li>`;
+        // 顯示問題頁面（壞死 + 阻塞）(H01 - XSS 修復)
+        const problemPages = report.pages.filter(p => p.status !== 'healthy');
+        if (problemPages.length > 0) {
+            html += '<h3 style="margin-top: 16px;">問題頁面</h3><ul>';
+            problemPages.slice(0, 8).forEach(item => {
+                const statusIcon = item.status === 'necrosis' ? '💀' : '🐢';
+                // 確保 status_code 和 latency 是數字後才顯示
+                const safeStatusCode = Number.isInteger(item.status_code) ? item.status_code : '-';
+                const safeLatency = Number.isInteger(item.latency) ? item.latency : '-';
+                const detail = item.status === 'necrosis'
+                    ? `<code>${safeStatusCode}</code>`
+                    : `<code>${safeLatency}ms</code>`;
+                html += `<li>${statusIcon} ${detail} ${this.escapeHtml(item.url)}</li>`;
             });
-            if (report.necrotic_tissue.length > 5) {
-                html += `<li>...還有 ${report.necrotic_tissue.length - 5} 個</li>`;
+            if (problemPages.length > 8) {
+                html += `<li>...還有 ${this.escapeHtml(String(problemPages.length - 8))} 個</li>`;
             }
             html += '</ul>';
         }
@@ -257,11 +330,31 @@ class SiteTomograph {
     downloadReport() {
         if (!this.report) return;
 
+        // 從輸入框取得網域名稱
+        let domain = 'unknown';
+        try {
+            const inputUrl = this.urlInput.value.trim();
+            domain = new URL(inputUrl.startsWith('http') ? inputUrl : 'https://' + inputUrl).hostname;
+            domain = domain.replace(/\./g, '-');  // example.com → example-com
+        } catch {
+            // 保持 unknown
+        }
+
+        // 時間戳記 YYYYMMDD-HHMM
+        const now = new Date();
+        const timestamp = now.getFullYear().toString() +
+            (now.getMonth() + 1).toString().padStart(2, '0') +
+            now.getDate().toString().padStart(2, '0') + '-' +
+            now.getHours().toString().padStart(2, '0') +
+            now.getMinutes().toString().padStart(2, '0');
+
+        const filename = `tomograph-${domain}-${timestamp}.json`;
+
         const blob = new Blob([JSON.stringify(this.report, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'site-tomograph-report.json';
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
     }

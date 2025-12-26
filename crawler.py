@@ -6,8 +6,10 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
-from typing import AsyncGenerator, Set, Dict, List
+from typing import AsyncGenerator, Set, Dict, List, Optional
+from urllib.robotparser import RobotFileParser
 import time
+import random
 
 
 class SiteCrawler:
@@ -28,7 +30,9 @@ class SiteCrawler:
         latency_threshold: int = 2000,  # 毫秒
         max_concurrent: int = 3,        # 降低並發數
         max_pages: int = 50,            # 總頁面上限
-        request_delay: float = 0.5      # 請求間隔（秒）
+        request_delay: float = 0.5,     # 請求間隔（秒）
+        max_retries: int = 3,           # 重試次數 (H06)
+        respect_robots: bool = True     # 遵守 robots.txt (H04)
     ):
         self.start_url = start_url
         self.max_depth = max_depth
@@ -36,6 +40,8 @@ class SiteCrawler:
         self.max_concurrent = max_concurrent
         self.max_pages = max_pages
         self.request_delay = request_delay
+        self.max_retries = max_retries
+        self.respect_robots = respect_robots
 
         # 解析起始 URL 的域名
         parsed = urlparse(start_url)
@@ -59,6 +65,10 @@ class SiteCrawler:
 
         # User-Agent 標明身份
         self.user_agent = "SiteTomograph/1.0 (Educational Tool; +https://github.com/tznthou/day-28-site-tomograph)"
+
+        # robots.txt 解析器 (H04)
+        self._robots_parser: Optional[RobotFileParser] = None
+        self._robots_loaded = False
 
     def _normalize_url(self, url: str, base_url: str) -> str | None:
         """正規化 URL，只保留同域名的連結"""
@@ -85,6 +95,85 @@ class SiteCrawler:
             return normalized
         except Exception:
             return None
+
+    async def _load_robots_txt(self, session: aiohttp.ClientSession) -> None:
+        """
+        載入並解析 robots.txt (H04)
+        """
+        if self._robots_loaded:
+            return
+
+        self._robots_loaded = True
+        robots_url = f"{self.base_scheme}://{self.base_domain}/robots.txt"
+
+        try:
+            async with session.get(
+                robots_url,
+                timeout=aiohttp.ClientTimeout(total=5),
+                headers={"User-Agent": self.user_agent}
+            ) as response:
+                if response.status == 200:
+                    content = await response.text()
+                    self._robots_parser = RobotFileParser()
+                    self._robots_parser.parse(content.splitlines())
+        except Exception:
+            # robots.txt 無法取得，預設允許所有
+            pass
+
+    def _can_fetch(self, url: str) -> bool:
+        """
+        檢查 robots.txt 是否允許爬取此 URL (H04)
+        """
+        if not self.respect_robots or self._robots_parser is None:
+            return True
+
+        return self._robots_parser.can_fetch(self.user_agent, url)
+
+    async def _fetch_with_retry(
+        self,
+        session: aiohttp.ClientSession,
+        url: str
+    ) -> dict:
+        """
+        帶重試機制的頁面抓取 (H06)
+
+        使用指數退避策略：
+        - 第 1 次重試：等待 1-2 秒
+        - 第 2 次重試：等待 2-4 秒
+        - 第 3 次重試：等待 4-8 秒
+        """
+        last_error = None
+
+        for attempt in range(self.max_retries):
+            try:
+                result = await self._fetch_page(session, url)
+
+                # 如果是暫時性錯誤（5xx），重試
+                if result["status_code"] in (500, 502, 503, 504) and attempt < self.max_retries - 1:
+                    # 指數退避 + 隨機抖動
+                    base_delay = 2 ** attempt
+                    jitter = random.uniform(0, base_delay)
+                    await asyncio.sleep(base_delay + jitter)
+                    continue
+
+                return result
+
+            except Exception as e:
+                last_error = e
+                if attempt < self.max_retries - 1:
+                    base_delay = 2 ** attempt
+                    jitter = random.uniform(0, base_delay)
+                    await asyncio.sleep(base_delay + jitter)
+
+        # 所有重試都失敗
+        return {
+            "url": url,
+            "status_code": 0,
+            "latency": 0,
+            "status": "necrosis",
+            "links": [],
+            "error": str(last_error) if last_error else "重試次數已達上限"
+        }
 
     async def _fetch_page(
         self,
@@ -160,12 +249,17 @@ class SiteCrawler:
         安全機制：
         - 達到 max_pages 上限時自動停止
         - 每個請求之間有 request_delay 間隔
+        - 遵守 robots.txt 規則 (H04)
+        - 失敗請求自動重試 (H06)
         """
         # 初始化佇列：(url, depth, parent_url)
         queue: List[tuple] = [(self.start_url, 0, None)]
         semaphore = asyncio.Semaphore(self.max_concurrent)
 
         async with aiohttp.ClientSession() as session:
+            # 載入 robots.txt (H04)
+            await self._load_robots_txt(session)
+
             while queue:
                 # 安全檢查：達到頁面上限時停止
                 if self.stats["total_pages"] >= self.max_pages:
@@ -180,6 +274,10 @@ class SiteCrawler:
 
                 # 跳過已訪問
                 if current_url in self.visited:
+                    continue
+
+                # 檢查 robots.txt 是否允許 (H04)
+                if not self._can_fetch(current_url):
                     continue
 
                 self.visited.add(current_url)
@@ -206,13 +304,14 @@ class SiteCrawler:
                         **link_data
                     }
 
-                # 抓取頁面
+                # 抓取頁面（帶重試機制）(H06)
                 async with semaphore:
-                    result = await self._fetch_page(session, current_url)
+                    result = await self._fetch_with_retry(session, current_url)
 
                 # 儲存節點資料
                 self.nodes[current_url] = {
                     "id": node_id,
+                    "depth": depth,
                     **result
                 }
 
@@ -256,24 +355,27 @@ class SiteCrawler:
                 orphans.append(url)
                 self.stats["orphan_pages"] += 1
 
-        # 壞死清單
-        necrotic_list = [
-            {"url": url, "status_code": node["status_code"]}
-            for url, node in self.nodes.items()
-            if node["status"] == "necrosis"
-        ]
+        # 建立完整頁面清單
+        # 排序優先級：necrosis (0) → blockage (1) → healthy (2)
+        # 同狀態內依 depth 淺到深
+        status_priority = {"necrosis": 0, "blockage": 1, "healthy": 2}
 
-        # 阻塞清單
-        blocked_list = [
-            {"url": url, "latency": node["latency"]}
-            for url, node in self.nodes.items()
-            if node["status"] == "blockage"
-        ]
+        all_pages = []
+        for url, node in self.nodes.items():
+            all_pages.append({
+                "url": url,
+                "status": node["status"],
+                "status_code": node["status_code"],
+                "latency": node["latency"],
+                "depth": node.get("depth", 0)
+            })
+
+        # 排序：狀態優先級 → 深度
+        all_pages.sort(key=lambda x: (status_priority.get(x["status"], 2), x["depth"]))
 
         return {
             "summary": self.stats,
-            "necrotic_tissue": necrotic_list,
-            "blocked_arteries": blocked_list,
+            "pages": all_pages,
             "orphan_nodes": orphans,
             "recommendations": self._generate_recommendations()
         }
