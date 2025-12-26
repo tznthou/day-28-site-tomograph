@@ -11,19 +11,31 @@ import time
 
 
 class SiteCrawler:
-    """非同步網站爬蟲，支援即時串流結果"""
+    """
+    非同步網站爬蟲，支援即時串流結果
+
+    安全限制：
+    - 最大頁面數：50 頁（防止無限爬取）
+    - 請求間隔：500ms（降低伺服器負載）
+    - 深度限制：預設 3 層
+    - 並發限制：預設 3 個同時請求
+    """
 
     def __init__(
         self,
         start_url: str,
         max_depth: int = 3,
         latency_threshold: int = 2000,  # 毫秒
-        max_concurrent: int = 5
+        max_concurrent: int = 3,        # 降低並發數
+        max_pages: int = 50,            # 總頁面上限
+        request_delay: float = 0.5      # 請求間隔（秒）
     ):
         self.start_url = start_url
         self.max_depth = max_depth
         self.latency_threshold = latency_threshold
         self.max_concurrent = max_concurrent
+        self.max_pages = max_pages
+        self.request_delay = request_delay
 
         # 解析起始 URL 的域名
         parsed = urlparse(start_url)
@@ -44,6 +56,9 @@ class SiteCrawler:
             "slow_pages": 0,
             "orphan_pages": 0
         }
+
+        # User-Agent 標明身份
+        self.user_agent = "SiteTomograph/1.0 (Educational Tool; +https://github.com/tznthou/day-28-site-tomograph)"
 
     def _normalize_url(self, url: str, base_url: str) -> str | None:
         """正規化 URL，只保留同域名的連結"""
@@ -79,8 +94,13 @@ class SiteCrawler:
         """抓取單一頁面，回傳狀態與連結"""
         start_time = time.time()
 
+        headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "text/html,application/xhtml+xml",
+        }
+
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10), headers=headers) as response:
                 latency = int((time.time() - start_time) * 1000)
                 status_code = response.status
 
@@ -136,6 +156,10 @@ class SiteCrawler:
     async def scan(self) -> AsyncGenerator[dict, None]:
         """
         開始掃描，以 async generator 形式串流結果
+
+        安全機制：
+        - 達到 max_pages 上限時自動停止
+        - 每個請求之間有 request_delay 間隔
         """
         # 初始化佇列：(url, depth, parent_url)
         queue: List[tuple] = [(self.start_url, 0, None)]
@@ -143,6 +167,14 @@ class SiteCrawler:
 
         async with aiohttp.ClientSession() as session:
             while queue:
+                # 安全檢查：達到頁面上限時停止
+                if self.stats["total_pages"] >= self.max_pages:
+                    yield {
+                        "type": "limit_reached",
+                        "message": f"已達到掃描上限（{self.max_pages} 頁），停止掃描以避免過度請求"
+                    }
+                    break
+
                 # 取出下一個要處理的 URL
                 current_url, depth, parent_url = queue.pop(0)
 
@@ -207,8 +239,8 @@ class SiteCrawler:
                         if link not in self.visited:
                             queue.append((link, depth + 1, current_url))
 
-                # 避免過快發送訊息
-                await asyncio.sleep(0.1)
+                # 請求間隔：降低對目標伺服器的負載
+                await asyncio.sleep(self.request_delay)
 
     def generate_report(self) -> dict:
         """產生診斷報告"""

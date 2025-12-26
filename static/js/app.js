@@ -7,6 +7,7 @@ class SiteTomograph {
         // DOM 元素
         this.urlInput = document.getElementById('url-input');
         this.scanBtn = document.getElementById('scan-btn');
+        this.stopBtn = document.getElementById('stop-btn');
         this.statusPanel = document.getElementById('status-panel');
         this.scanStatus = document.getElementById('scan-status');
         this.nodeCount = document.getElementById('node-count');
@@ -39,6 +40,7 @@ class SiteTomograph {
 
     bindEvents() {
         this.scanBtn.addEventListener('click', () => this.startScan());
+        this.stopBtn.addEventListener('click', () => this.stopScan());
 
         this.urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -53,6 +55,15 @@ class SiteTomograph {
         document.getElementById('close-report').addEventListener('click', () => {
             this.reportPanel.classList.add('hidden');
         });
+    }
+
+    stopScan() {
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+        this.scanStatus.textContent = '已手動停止';
+        this.endScan();
     }
 
     startScan() {
@@ -79,8 +90,8 @@ class SiteTomograph {
         // 重置狀態
         this.reset();
         this.isScanning = true;
-        this.scanBtn.disabled = true;
-        this.scanBtn.textContent = '掃描中...';
+        this.scanBtn.classList.add('hidden');
+        this.stopBtn.classList.remove('hidden');
         this.statusPanel.classList.remove('hidden');
         this.scanStatus.textContent = '連接中...';
         this.loading.classList.remove('hidden');
@@ -140,6 +151,11 @@ class SiteTomograph {
                 this.report = data.report;
                 this.showReport(data.report);
                 this.endScan();
+                break;
+
+            case 'limit_reached':
+                this.scanStatus.textContent = '已達上限';
+                console.log(data.message);
                 break;
 
             case 'error':
@@ -252,9 +268,8 @@ class SiteTomograph {
 
     endScan() {
         this.isScanning = false;
-        this.scanBtn.disabled = false;
-        this.scanBtn.textContent = '掃描';
-        this.scanStatus.textContent = '完成';
+        this.scanBtn.classList.remove('hidden');
+        this.stopBtn.classList.add('hidden');
         this.loading.classList.add('hidden');
 
         if (this.ws) {

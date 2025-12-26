@@ -123,6 +123,24 @@ body::before {
     cursor: not-allowed;
 }
 
+#stop-btn {
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#stop-btn:hover {
+    background: #b91c1c;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+
 /* 狀態面板 */
 #status-panel {
     border-top: 1px solid var(--border);
